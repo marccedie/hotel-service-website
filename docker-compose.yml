@@ -1,0 +1,61 @@
+services:
+  mongodb:
+    image: docker.io/bitnami/mongodb:8.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGODB_USERNAME=user
+      - MONGODB_PASSWORD=pass
+      - MONGODB_DATABASE=medical_jobs
+      - MONGODB_ROOT_PASSWORD=rootpass
+    volumes:
+      - "mongodb_data:/bitnami/mongodb"
+
+  mailcatcher:
+    image: schickling/mailcatcher:latest
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+  minio:
+    build:
+      context: ./minio
+      dockerfile: Dockerfile
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - 'minio_data:/bitnami/minio/data'
+    environment:
+      - MINIO_ROOT_USER=minio-access-key
+      - MINIO_ROOT_PASSWORD=minio-secret-key
+      - MINIO_DEFAULT_BUCKETS=medicaljobs:readonly
+      - MINIO_SERVER_URL=http://localhost:9000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  nominatim:
+    image: mediagis/nominatim:5.1
+    ports:
+        - "8080:8080"
+    environment:
+        # see https://github.com/mediagis/nominatim-docker/tree/master/5.1#configuration for more options
+        PBF_URL: https://download.geofabrik.de/europe/monaco-latest.osm.pbf
+        REPLICATION_URL: https://download.geofabrik.de/europe/monaco-updates/
+        NOMINATIM_PASSWORD: pass
+    volumes:
+        - nominatim_data:/var/lib/postgresql/16/main
+    shm_size: 1gb
+
+
+volumes:
+  mongodb_data:
+    driver: local
+  minio_data:
+    driver: local
+  nominatim_data:
+    driver: local
